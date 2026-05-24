@@ -8,6 +8,7 @@ using namespace geode::prelude;
 
 bool g_paintMode = false;
 cocos2d::ccColor3B g_paintColor = {255, 255, 255};
+float g_precision = 0.5f;
 
 class $modify(MyLevelEditorLayer, LevelEditorLayer) {
     void onStopPlaytest() {
@@ -23,6 +24,8 @@ class $modify(MyEditorUI, EditorUI) {
         CCTextInputNode* m_colorInput = nullptr;
         std::vector<std::vector<GameObject*>> m_undoStack;
         std::vector<std::vector<GameObject*>> m_redoStack;
+        CCLabelBMFont* m_precisionLabel = nullptr;
+        Slider* m_precisionSlider = nullptr;
     };
 
     bool init(LevelEditorLayer* layer) {
@@ -59,23 +62,24 @@ class $modify(MyEditorUI, EditorUI) {
         CCPoint menuPos = {winSize.width / 2, 570};
         if (auto tabMenu = this->getChildByID("build-tabs-menu")) {
             menuPos = tabMenu->getPosition();
-            menuPos.y += 100;
+            menuPos.y += 130;
         }
 
         auto bg = CCScale9Sprite::create("GJ_square01.png");
-        bg->setContentSize({500, 120});
+        bg->setContentSize({550, 160});
         bg->setPosition(menuPos);
         bg->setOpacity(220);
         panel->addChild(bg);
 
+        // ── 1행: Color 입력 ──
         auto label = CCLabelBMFont::create("Color:", "bigFont.fnt");
         label->setScale(0.45f);
-        label->setPosition({menuPos.x - 180, menuPos.y + 25});
+        label->setPosition({menuPos.x - 200, menuPos.y + 45});
         panel->addChild(label);
 
         auto inputBg = CCScale9Sprite::create("square02_001.png");
         inputBg->setContentSize({220, 36});
-        inputBg->setPosition({menuPos.x + 30, menuPos.y + 25});
+        inputBg->setPosition({menuPos.x + 30, menuPos.y + 45});
         inputBg->setOpacity(100);
         panel->addChild(inputBg);
 
@@ -84,21 +88,57 @@ class $modify(MyEditorUI, EditorUI) {
         input->setMaxLabelScale(0.5f);
         input->setLabelPlaceholderScale(0.0f);
         input->setAllowedChars("#0123456789ABCDEFabcdef");
-        input->setPosition({menuPos.x + 30, menuPos.y + 25});
+        input->setPosition({menuPos.x + 30, menuPos.y + 45});
         input->setID("color-input"_spr);
         panel->addChild(input);
         m_fields->m_colorInput = input;
 
+        // ── 2행: Precision (구조 및 좌표 수정) ──
+        auto precLabel = CCLabelBMFont::create("Precision:", "bigFont.fnt");
+        precLabel->setScale(0.45f);
+        precLabel->setPosition({menuPos.x - 120, menuPos.y - 10});
+        panel->addChild(precLabel);
+
+        auto valueLabel = CCLabelBMFont::create("0.50", "bigFont.fnt");
+        valueLabel->setScale(0.45f);
+        valueLabel->setID("precision-value"_spr);
+        valueLabel->setPosition({menuPos.x + 40, menuPos.y - 10});
+        panel->addChild(valueLabel);
+        m_fields->m_precisionLabel = valueLabel;
+
+        // [수정] 깨지던 기존 슬라이더 선언부 완전 제거
+
+        // ── 3행: 버튼 메뉴 구성 ──
         auto menu = CCMenu::create();
         menu->setPosition(menuPos);
         menu->setTouchPriority(-200);
+
+        // [수정] 쓰레기통 제거 -> 순정 왼쪽 화살표(<) 에셋 적용 및 좌표 조정
+        auto minusSprite = CCSprite::createWithSpriteFrameName("edit_leftBtn_001.png");
+        if (!minusSprite) minusSprite = CCSprite::create();
+        minusSprite->setScale(0.75f);
+
+        auto minusBtn = CCMenuItemSpriteExtra::create(
+            minusSprite, this, menu_selector(MyEditorUI::onPrecisionMinus)
+        );
+        minusBtn->setPosition({-10, -10});
+
+        // [수정] 순정 오른쪽 화살표(>) 에셋 적용 및 좌표 조정
+        auto plusSprite = CCSprite::createWithSpriteFrameName("edit_rightBtn_001.png");
+        if (!plusSprite) plusSprite = CCSprite::create();
+        plusSprite->setScale(0.75f);
+
+        auto plusBtn = CCMenuItemSpriteExtra::create(
+            plusSprite, this, menu_selector(MyEditorUI::onPrecisionPlus)
+        );
+        plusBtn->setPosition({90, -10});
 
         auto applyLabel = CCLabelBMFont::create("Apply", "bigFont.fnt");
         applyLabel->setScale(0.45f);
         auto applyBtn = CCMenuItemSpriteExtra::create(
             applyLabel, this, menu_selector(MyEditorUI::onApplyColor)
         );
-        applyBtn->setPosition({-150, -25});
+        applyBtn->setPosition({-150, -60});
 
         auto paintSprite = CCSprite::createWithSpriteFrameName("GJ_hammerIcon_001.png");
         if (!paintSprite) paintSprite = CCSprite::create();
@@ -106,22 +146,24 @@ class $modify(MyEditorUI, EditorUI) {
         auto paintBtn = CCMenuItemSpriteExtra::create(
             paintSprite, this, menu_selector(MyEditorUI::onPaintBucketClicked)
         );
-        paintBtn->setPosition({-50, -25});
+        paintBtn->setPosition({-50, -60});
 
         auto undoLabel = CCLabelBMFont::create("Undo", "bigFont.fnt");
         undoLabel->setScale(0.45f);
         auto undoBtn = CCMenuItemSpriteExtra::create(
             undoLabel, this, menu_selector(MyEditorUI::onPaintUndo)
         );
-        undoBtn->setPosition({50, -25});
+        undoBtn->setPosition({50, -60});
 
         auto redoLabel = CCLabelBMFont::create("Redo", "bigFont.fnt");
         redoLabel->setScale(0.45f);
         auto redoBtn = CCMenuItemSpriteExtra::create(
             redoLabel, this, menu_selector(MyEditorUI::onPaintRedo)
         );
-        redoBtn->setPosition({150, -25});
+        redoBtn->setPosition({150, -60});
 
+        menu->addChild(minusBtn);
+        menu->addChild(plusBtn);
         menu->addChild(applyBtn);
         menu->addChild(paintBtn);
         menu->addChild(undoBtn);
@@ -130,6 +172,33 @@ class $modify(MyEditorUI, EditorUI) {
 
         this->addChild(panel, 100);
         m_fields->m_paintTabContent = panel;
+    }
+
+    void updatePrecisionLabel() {
+        if (!m_fields->m_precisionLabel) return;
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%.2f", g_precision);
+        m_fields->m_precisionLabel->setString(buf);
+    }
+
+    // [수정] 슬라이더가 제거되었으므로 크래시 방지를 위해 함수 내부 비움
+    void onPrecisionSlider(CCObject* sender) {
+        return;
+    }
+
+    // [수정] 버튼 조작에 맞게 슬라이더 업데이트 로직 제거 및 범위 안전 처리
+    void onPrecisionMinus(CCObject*) {
+        g_precision -= 0.05f;
+        if (g_precision < 0.05f) g_precision = 0.05f;
+        g_precision = std::round(g_precision * 100.0f) / 100.0f;
+        updatePrecisionLabel();
+    }
+
+    void onPrecisionPlus(CCObject*) {
+        g_precision += 0.05f;
+        if (g_precision > 0.5f) g_precision = 0.5f;
+        g_precision = std::round(g_precision * 100.0f) / 100.0f;
+        updatePrecisionLabel();
     }
 
     bool parseHexColor(const std::string& hex, cocos2d::ccColor3B& out) {
@@ -176,11 +245,9 @@ class $modify(MyEditorUI, EditorUI) {
             Notification::create("Nothing to undo!", NotificationIcon::Warning)->show();
             return;
         }
-
         auto layer = this->m_editorLayer;
         auto lastBatch = m_fields->m_undoStack.back();
         m_fields->m_undoStack.pop_back();
-
         for (auto* obj : lastBatch) {
             if (obj) {
                 obj->setVisible(false);
@@ -188,7 +255,6 @@ class $modify(MyEditorUI, EditorUI) {
                 layer->m_objects->removeObject(obj);
             }
         }
-
         m_fields->m_redoStack.push_back(lastBatch);
         layer->updateOptions();
         Notification::create("Undo!", NotificationIcon::Info)->show();
@@ -199,11 +265,9 @@ class $modify(MyEditorUI, EditorUI) {
             Notification::create("Nothing to redo!", NotificationIcon::Warning)->show();
             return;
         }
-
         auto layer = this->m_editorLayer;
         auto lastBatch = m_fields->m_redoStack.back();
         m_fields->m_redoStack.pop_back();
-
         for (auto* obj : lastBatch) {
             if (obj) {
                 obj->setVisible(true);
@@ -211,7 +275,6 @@ class $modify(MyEditorUI, EditorUI) {
                 layer->m_objects->addObject(obj);
             }
         }
-
         m_fields->m_undoStack.push_back(lastBatch);
         layer->updateOptions();
         Notification::create("Redo!", NotificationIcon::Info)->show();
@@ -250,12 +313,11 @@ class $modify(MyEditorUI, EditorUI) {
 
     float findTrueEdge(CCPoint start, float dir, float maxRange) {
         float x = start.x;
-        const float precision = 0.5f;
         float dist = 0.0f;
         while (dist < maxRange) {
-            if (isWallAt({x + dir * precision, start.y})) break;
-            x += dir * precision;
-            dist += precision;
+            if (isWallAt({x + dir * g_precision, start.y})) break;
+            x += dir * g_precision;
+            dist += g_precision;
         }
         return x;
     }
