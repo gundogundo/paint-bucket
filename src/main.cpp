@@ -71,7 +71,6 @@ class $modify(MyEditorUI, EditorUI) {
         bg->setOpacity(220);
         panel->addChild(bg);
 
-        // ── 1행: Color 입력 ──
         auto label = CCLabelBMFont::create("Color:", "bigFont.fnt");
         label->setScale(0.45f);
         label->setPosition({menuPos.x - 200, menuPos.y + 45});
@@ -93,7 +92,6 @@ class $modify(MyEditorUI, EditorUI) {
         panel->addChild(input);
         m_fields->m_colorInput = input;
 
-        // ── 2행: Precision (구조 및 좌표 수정) ──
         auto precLabel = CCLabelBMFont::create("Precision:", "bigFont.fnt");
         precLabel->setScale(0.45f);
         precLabel->setPosition({menuPos.x - 120, menuPos.y - 10});
@@ -106,28 +104,21 @@ class $modify(MyEditorUI, EditorUI) {
         panel->addChild(valueLabel);
         m_fields->m_precisionLabel = valueLabel;
 
-        // [수정] 깨지던 기존 슬라이더 선언부 완전 제거
-
-        // ── 3행: 버튼 메뉴 구성 ──
         auto menu = CCMenu::create();
         menu->setPosition(menuPos);
         menu->setTouchPriority(-200);
 
-        // [수정] 쓰레기통 제거 -> 순정 왼쪽 화살표(<) 에셋 적용 및 좌표 조정
         auto minusSprite = CCSprite::createWithSpriteFrameName("edit_leftBtn_001.png");
         if (!minusSprite) minusSprite = CCSprite::create();
         minusSprite->setScale(0.75f);
-
         auto minusBtn = CCMenuItemSpriteExtra::create(
             minusSprite, this, menu_selector(MyEditorUI::onPrecisionMinus)
         );
         minusBtn->setPosition({-10, -10});
 
-        // [수정] 순정 오른쪽 화살표(>) 에셋 적용 및 좌표 조정
         auto plusSprite = CCSprite::createWithSpriteFrameName("edit_rightBtn_001.png");
         if (!plusSprite) plusSprite = CCSprite::create();
         plusSprite->setScale(0.75f);
-
         auto plusBtn = CCMenuItemSpriteExtra::create(
             plusSprite, this, menu_selector(MyEditorUI::onPrecisionPlus)
         );
@@ -181,12 +172,10 @@ class $modify(MyEditorUI, EditorUI) {
         m_fields->m_precisionLabel->setString(buf);
     }
 
-    // [수정] 슬라이더가 제거되었으므로 크래시 방지를 위해 함수 내부 비움
     void onPrecisionSlider(CCObject* sender) {
         return;
     }
 
-    // [수정] 버튼 조작에 맞게 슬라이더 업데이트 로직 제거 및 범위 안전 처리
     void onPrecisionMinus(CCObject*) {
         g_precision -= 0.05f;
         if (g_precision < 0.05f) g_precision = 0.05f;
