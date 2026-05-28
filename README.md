@@ -14,6 +14,11 @@ Automatically fills closed shapes in the editor.
 ```sh
 geode build
 ```
+## Bug Reports & Feedback
+If you encounter any bugs, or have suggestions for improvement, please contact me on Discord:
+`iglhfi_91213`
+
+Please include a brief description of the issue, and screenshots or videos if possible!
 
 ## Resources
 * [Geode SDK Documentation](https://docs.geode-sdk.org/)
